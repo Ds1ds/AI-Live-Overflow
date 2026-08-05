@@ -32,8 +32,8 @@ object SupabaseRepository {
     /** 本地缓存的宠物状态，与云端 pet_state 行一一对应 */
     data class PetState(
         var heat: Int = 50,
-        var valence: Float = 0f,
-        var arousal: Float = 0f,
+        var valence: Double = 0.0,
+        var arousal: Double = 0.0,
         var mood: String = "normal"
     ) {
         fun toJson(deviceId: String): JSONObject = JSONObject()
@@ -72,8 +72,8 @@ object SupabaseRepository {
                             onResult(
                                 PetState(
                                     heat = o.optInt("heat", 50),
-                                    valence = o.optDouble("valence", 0.0).toFloat(),
-                                    arousal = o.optDouble("arousal", 0.0).toFloat(),
+                                    valence = o.optDouble("valence", 0.0),
+                                    arousal = o.optDouble("arousal", 0.0),
                                     mood = o.optString("mood", "normal")
                                 )
                             )
