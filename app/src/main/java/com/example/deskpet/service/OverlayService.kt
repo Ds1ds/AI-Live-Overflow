@@ -195,7 +195,7 @@ class OverlayService : Service() {
     private fun onTap() {
         // 轻触：小猫回应，略降情绪值
         localState.heat = (localState.heat - 2).coerceIn(0, 100)
-        localState.arousal = (localState.arousal - 0.1f).coerceAtLeast(0f)
+        localState.arousal = (localState.arousal - 0.1).coerceAtLeast(0.0)
         localState.mood = "normal"
         SupabaseRepository.sendMessage(deviceId, "self", "喵？")
         overlayView?.evaluateJavascript(
@@ -206,8 +206,8 @@ class OverlayService : Service() {
     private fun onDoubleTap() {
         // 双击：开心，情绪值上升
         localState.heat = (localState.heat + 5).coerceIn(0, 100)
-        localState.valence = (localState.valence + 0.2f).coerceIn(-1f, 1f)
-        localState.arousal = (localState.arousal + 0.3f).coerceIn(0f, 1f)
+        localState.valence = (localState.valence + 0.2).coerceIn(-1.0, 1.0)
+        localState.arousal = (localState.arousal + 0.3).coerceIn(0.0, 1.0)
         localState.mood = "happy"
         SupabaseRepository.sendMessage(deviceId, "self", "嘿嘿，摸我啦 ♥")
         overlayView?.evaluateJavascript(
@@ -218,7 +218,7 @@ class OverlayService : Service() {
     private fun onLongPress() {
         // 长按：委屈，情绪值下降
         localState.heat = (localState.heat - 5).coerceIn(0, 100)
-        localState.valence = (localState.valence - 0.3f).coerceIn(-1f, 1f)
+        localState.valence = (localState.valence - 0.3).coerceIn(-1.0, 1.0)
         localState.mood = "sad"
         SupabaseRepository.sendMessage(deviceId, "self", "……躲起来了")
         overlayView?.evaluateJavascript(
