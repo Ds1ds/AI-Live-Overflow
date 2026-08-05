@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <style>
 body { margin:0; overflow:hidden; background:transparent; }
-#pet { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:150px; }
+#pet { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:70px; image-rendering:pixelated; }
 .bubble {
-  position:absolute; bottom:180px; left:50%; transform:translateX(-50%);
-  background:rgba(255,255,255,0.95); border-radius:12px; padding:8px 12px;
-  font:12px sans-serif; color:#333; white-space:nowrap; display:none;
-  box-shadow:0 2px 8px rgba(0,0,0,0.15);
+  position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
+  background:rgba(255,182,193,0.95); border-radius:10px; padding:6px 10px;
+  font:11px sans-serif; color:#8a4a5a; white-space:nowrap; display:none;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15); border:2px solid #ff9db0;
 }
 .bubble::after {
-  content:""; position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
+  content:""; position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
   border-left:6px solid transparent; border-right:6px solid transparent;
-  border-top:6px solid rgba(255,255,255,0.95);
+  border-top:6px solid #ff9db0;
 }
 @keyframes blink { 0%,92%,100% { transform:scaleY(1);} 96% { transform:scaleY(0.1);} }
 @keyframes idle { 0%,100% { transform:translateY(0);} 50% { transform:translateY(-6px);} }
@@ -24,23 +24,30 @@ body { margin:0; overflow:hidden; background:transparent; }
 </head>
 <body>
 <div class="bubble" id="bubble"></div>
-<svg id="pet" viewBox="0 0 200 220">
+<svg id="pet" viewBox="0 0 200 200">
   <g id="body">
-    <ellipse id="bodyOuter" cx="100" cy="150" rx="70" ry="60" fill="#9aa0a6"/>
-    <ellipse id="bodyInner" cx="100" cy="120" rx="55" ry="45" fill="#b8bcc2"/>
-    <path d="M45 120 Q30 90 45 60 Q60 75 70 90" fill="#9aa0a6"/>
-    <path d="M155 120 Q170 90 155 60 Q140 75 130 90" fill="#9aa0a6"/>
-    <ellipse cx="62" cy="180" rx="14" ry="20" fill="#9aa0a6"/>
-    <ellipse cx="138" cy="180" rx="14" ry="20" fill="#9aa0a6"/>
+    <rect id="bodyOuter" x="42" y="60" width="116" height="120" fill="#ffffff" stroke="#555" stroke-width="2"/>
+    <rect x="44" y="42" width="24" height="26" fill="#ffffff" stroke="#555" stroke-width="2"/>
+    <rect x="44" y="42" width="24" height="8" fill="#4a3b2f"/>
+    <rect x="50" y="38" width="8" height="6" fill="#f5c542"/>
+    <rect x="132" y="42" width="24" height="26" fill="#ffffff" stroke="#555" stroke-width="2"/>
+    <rect x="132" y="42" width="24" height="8" fill="#4a3b2f"/>
+    <rect x="142" y="38" width="8" height="6" fill="#f5c542"/>
+    <rect x="50" y="58" width="10" height="14" fill="#ffd0dc"/>
+    <rect x="140" y="58" width="10" height="14" fill="#ffd0dc"/>
+    <rect x="108" y="60" width="34" height="14" fill="#f5a623"/>
   </g>
   <g class="eye">
-    <ellipse cx="82" cy="112" rx="9" ry="11" fill="#333"/>
-    <ellipse cx="118" cy="112" rx="9" ry="11" fill="#333"/>
-    <circle cx="85" cy="108" r="3" fill="#fff"/>
-    <circle cx="121" cy="108" r="3" fill="#fff"/>
+    <rect x="66" y="92" width="20" height="22" fill="#222"/>
+    <rect x="114" y="92" width="20" height="22" fill="#222"/>
+    <rect x="71" y="95" width="6" height="8" fill="#ffb3c1"/>
+    <rect x="119" y="95" width="6" height="8" fill="#ffb3c1"/>
   </g>
-  <path id="mouth" d="M92 138 Q100 145 108 138" stroke="#555" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M88 128 L92 132 M112 128 L108 132" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+  <rect x="50" y="120" width="20" height="13" fill="#ffb3c1"/>
+  <rect x="130" y="120" width="20" height="13" fill="#ffb3c1"/>
+  <rect x="93" y="126" width="14" height="10" fill="#f0a0a8"/>
+  <rect id="bodyInner" x="52" y="142" width="96" height="34" fill="#f0f0f0"/>
+  <path id="mouth" d="M88 146 h8 v-6 h8 v6 h8" stroke="#8a4a5a" stroke-width="3" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
 </svg>
 <script>
 // petEngine:由OverlayService通过evaluateJavascript调用
@@ -66,20 +73,20 @@ var bodyOuter = document.getElementById('bodyOuter');
 var bodyInner = document.getElementById('bodyInner');
 var mouth = document.getElementById('mouth');
 function applyState() {
-  // heat 驱动体色：低→冷淡蓝灰，中→原色，高→暖粉
+  // heat 驱动体色：低→冷灰白，中→纯白，高→暖粉白
   var h = currentState.heat;
   var outer, inner;
-  if (h < 30) { outer = '#7f8c9a'; inner = '#9aa7b5'; }
-  else if (h > 70) { outer = '#d98a8a'; inner = '#e8a5a5'; }
-  else { outer = '#9aa0a6'; inner = '#b8bcc2'; }
+  if (h < 30) { outer = '#c8d0d8'; inner = '#dde4ea'; }
+  else if (h > 70) { outer = '#ffd9d9'; inner = '#ffe9e9'; }
+  else { outer = '#ffffff'; inner = '#f0f0f0'; }
   bodyOuter.setAttribute('fill', outer);
   bodyInner.setAttribute('fill', inner);
-  // mood 驱动嘴型
+  // mood 驱动像素嘴型（阶梯折线）
   switch (currentState.mood) {
-    case 'happy': mouth.setAttribute('d', 'M92 138 Q100 148 108 138'); break;
-    case 'sad': mouth.setAttribute('d', 'M92 142 Q100 132 108 142'); break;
-    case 'angry': mouth.setAttribute('d', 'M92 140 L108 140'); break;
-    default: mouth.setAttribute('d', 'M92 138 Q100 145 108 138'); break;
+    case 'happy': mouth.setAttribute('d', 'M90 147 h6 v-6 h8 v6 h6'); break;
+    case 'sad': mouth.setAttribute('d', 'M90 141 h6 v6 h8 v-6 h6'); break;
+    case 'angry': mouth.setAttribute('d', 'M90 144 h20'); break;
+    default: mouth.setAttribute('d', 'M90 145 h6 v3 h8 v-3 h6'); break;
   }
 }
 function say(text) {
