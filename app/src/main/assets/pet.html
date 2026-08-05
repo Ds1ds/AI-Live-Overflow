@@ -26,8 +26,8 @@ body { margin:0; overflow:hidden; background:transparent; }
 <div class="bubble" id="bubble"></div>
 <svg id="pet" viewBox="0 0 200 220">
   <g id="body">
-    <ellipse cx="100" cy="150" rx="70" ry="60" fill="#9aa0a6"/>
-    <ellipse cx="100" cy="120" rx="55" ry="45" fill="#b8bcc2"/>
+    <ellipse id="bodyOuter" cx="100" cy="150" rx="70" ry="60" fill="#9aa0a6"/>
+    <ellipse id="bodyInner" cx="100" cy="120" rx="55" ry="45" fill="#b8bcc2"/>
     <path d="M45 120 Q30 90 45 60 Q60 75 70 90" fill="#9aa0a6"/>
     <path d="M155 120 Q170 90 155 60 Q140 75 130 90" fill="#9aa0a6"/>
     <ellipse cx="62" cy="180" rx="14" ry="20" fill="#9aa0a6"/>
@@ -39,19 +39,49 @@ body { margin:0; overflow:hidden; background:transparent; }
     <circle cx="85" cy="108" r="3" fill="#fff"/>
     <circle cx="121" cy="108" r="3" fill="#fff"/>
   </g>
-  <path d="M92 138 Q100 145 108 138" stroke="#555" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path id="mouth" d="M92 138 Q100 145 108 138" stroke="#555" stroke-width="3" fill="none" stroke-linecap="round"/>
   <path d="M88 128 L92 132 M112 128 L108 132" stroke="#555" stroke-width="2" stroke-linecap="round"/>
 </svg>
 <script>
-// petEngine: 由OverlayService通过evaluateJavascript调用
+// petEngine:由OverlayService通过evaluateJavascript调用
+var currentState = { heat: 50, valence: 0, arousal: 0, mood: 'normal' };
 window.petEngine = {
   onTap: function() { say("喵？"); },
   onDoubleTap: function() { say("嘿嘿，摸我啦 ♥"); bounce(); },
   onLongPress: function() { hide(); say("……躲起来了"); },
-  say: say
+  say: say,
+  setState: function(s) {
+    if (!s) return;
+    if (s.heat != null) currentState.heat = s.heat;
+    if (s.valence != null) currentState.valence = s.valence;
+    if (s.arousal != null) currentState.arousal = s.arousal;
+    if (s.mood) currentState.mood = s.mood;
+    applyState();
+  },
+  showCloud: function(text) { say(text); }
 };
 var bubble = document.getElementById('bubble');
 var pet = document.getElementById('pet');
+var bodyOuter = document.getElementById('bodyOuter');
+var bodyInner = document.getElementById('bodyInner');
+var mouth = document.getElementById('mouth');
+function applyState() {
+  // heat 驱动体色：低→冷淡蓝灰，中→原色，高→暖粉
+  var h = currentState.heat;
+  var outer, inner;
+  if (h < 30) { outer = '#7f8c9a'; inner = '#9aa7b5'; }
+  else if (h > 70) { outer = '#d98a8a'; inner = '#e8a5a5'; }
+  else { outer = '#9aa0a6'; inner = '#b8bcc2'; }
+  bodyOuter.setAttribute('fill', outer);
+  bodyInner.setAttribute('fill', inner);
+  // mood 驱动嘴型
+  switch (currentState.mood) {
+    case 'happy': mouth.setAttribute('d', 'M92 138 Q100 148 108 138'); break;
+    case 'sad': mouth.setAttribute('d', 'M92 142 Q100 132 108 142'); break;
+    case 'angry': mouth.setAttribute('d', 'M92 140 L108 140'); break;
+    default: mouth.setAttribute('d', 'M92 138 Q100 145 108 138'); break;
+  }
+}
 function say(text) {
   bubble.textContent = text;
   bubble.style.display = 'block';
