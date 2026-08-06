@@ -176,3 +176,47 @@ function flyback() {
     setTimeout(function() { pet.style.transition = 'none'; }, 600);
   }, 600);
 }
+
+// === 基础函数 ===
+var sayTimer = null;
+function say(text) {
+  if (!text) return;
+  bubble.textContent = text;
+  bubble.style.display = 'block';
+  // 触发嘴动
+  mouth.style.animation = 'none';
+  void mouth.offsetWidth;
+  mouth.style.animation = '';
+  clearTimeout(sayTimer);
+  sayTimer = setTimeout(function() { bubble.style.display = 'none'; }, 3000);
+}
+
+function applyState() {
+  var h = currentState.heat;
+  if (h == null) h = 50;
+  // 身体永远纯白；heat只影响腮红深浅 + 红晕
+  var blushColor = h > 70 ? '#ff7f9e' : (h < 30 ? '#f5b8c4' : '#ff9db0');
+  var blushes = document.querySelectorAll('.blush');
+  for (var i = 0; i < blushes.length; i++) blushes[i].setAttribute('fill', blushColor);
+  heatOverlay.style.opacity = h > 80 ? '1' : (h > 60 ? '0.6' : '0');
+}
+
+function bounce() {
+  pet.style.transition = 'transform 0.15s ease-in-out';
+  pet.style.transform = 'translateX(-50%) scale(1.2)';
+  setTimeout(function() {
+    pet.style.transform = 'translateX(-50%) scale(1)';
+    setTimeout(function() { pet.style.transition = 'none'; }, 150);
+  }, 150);
+}
+
+function hide() {
+  pet.style.transition = 'transform 0.4s ease-in, opacity 0.4s';
+  pet.style.transform = 'translateX(-50%) translateY(20px) scale(0.5)';
+  pet.style.opacity = '0';
+  setTimeout(function() {
+    pet.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+    pet.style.opacity = '1';
+    setTimeout(function() { pet.style.transition = 'none'; }, 400);
+  }, 2000);
+}
