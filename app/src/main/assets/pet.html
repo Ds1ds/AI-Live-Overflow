@@ -4,54 +4,131 @@
 <meta charset="utf-8">
 <style>
 body { margin:0; overflow:hidden; background:transparent; }
-#pet { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:70px; image-rendering:pixelated; }
+#pet { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:70px; image-rendering:pixelated; transition:opacity 0.5s; }
 .bubble {
   position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
   background:rgba(255,182,193,0.95); border-radius:10px; padding:6px 10px;
   font:11px sans-serif; color:#8a4a5a; white-space:nowrap; display:none;
-  box-shadow:0 2px 8px rgba(0,0,0,0.15); border:2px solid #ff9db0;
+  box-shadow:0 2px 8px rgba(0,0,0,0.15); border:2px solid #ff9db0; z-index:5;
 }
 .bubble::after {
   content:""; position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
   border-left:6px solid transparent; border-right:6px solid transparent;
   border-top:6px solid #ff9db0;
 }
+#heatOverlay {
+  position:absolute; inset:-20px; pointer-events:none; z-index:1;
+  background:radial-gradient(ellipse at center, transparent 55%, rgba(255,60,60,0.35) 100%);
+  opacity:0; transition:opacity 1s;
+}
+#zzz { position:absolute; bottom:60px; left:50%; transform:translateX(-50%); font:bold 16px sans-serif; color:#8a8ab0; display:none; z-index:4; animation:floatZ 1.5s ease-in-out infinite; }
+@keyframes floatZ { 0%,100%{transform:translate(-50%,0);opacity:1;} 50%{transform:translate(-50%,-8px);opacity:0.6;} }
 @keyframes blink { 0%,92%,100% { transform:scaleY(1);} 96% { transform:scaleY(0.1);} }
 @keyframes idle { 0%,100% { transform:translateY(0);} 50% { transform:translateY(-6px);} }
 @keyframes talk { 0%,100% { transform:scaleY(1);} 50% { transform:scaleY(0.3);} }
+@keyframes wobble { 0%,100%{transform:translateX(-50%) rotate(-6deg);} 50%{transform:translateX(-50%) rotate(6deg);} }
+@keyframes flyin { 0%{transform:translateX(-50%) scale(0.5) rotate(360deg);} 100%{transform:translateX(-50%) scale(1) rotate(0);} }
 .eye { animation: blink 4s infinite; transform-origin:center; transform-box:fill-box; }
 #body { animation: idle 3s ease-in-out infinite; }
 #mouth { animation: talk 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+.act-wobble #pet { animation: wobble 0.8s ease-in-out 2; }
+.act-fly #pet { animation: flyin 0.7s ease-out; }
+.act-sleep #mouth { animation:none; transform:scaleY(0.4); }
+.act-sleep .eye { animation:none; transform:scaleY(0.25); }
+.act-peek .eye { transform:translateX(4px); animation:none; }
 </style>
 </head>
 <body>
+<div id="heatOverlay"></div>
+<div id="zzz">💤</div>
 <div class="bubble" id="bubble"></div>
 <svg id="pet" viewBox="0 0 200 200">
   <g id="body">
-    <!-- 白色方脸+身体一体 -->
     <rect id="bodyOuter" x="25" y="55" width="150" height="115" rx="12" fill="#ffffff" stroke="#4a4a4f" stroke-width="3"/>
-    <!-- 左耳：灰色大三角（参考图：灰耳从上往下） -->
     <path id="earL" d="M50 12 L28 66 L76 66 Z" fill="#c8c6ca" stroke="#4a4a4f" stroke-width="3" stroke-linejoin="round"/>
-    <!-- 右耳：米黄色大三角 -->
     <path id="earR" d="M150 12 L172 66 L124 66 Z" fill="#f3d2a3" stroke="#8a6a44" stroke-width="3" stroke-linejoin="round"/>
-    <!-- 眼睛：黑色大竖条 -->
     <rect class="eye" x="58" y="92" width="26" height="46" rx="9" fill="#222222"/>
     <rect class="eye" x="116" y="92" width="26" height="46" rx="9" fill="#222222"/>
-    <!-- 腮红：粉色 -->
-    <rect x="34" y="118" width="20" height="15" rx="5" fill="#ff9db0"/>
-    <rect x="146" y="118" width="20" height="15" rx="5" fill="#ff9db0"/>
-    <!-- 像素小嘴（会动） -->
+    <rect class="blush" x="34" y="118" width="20" height="15" rx="5" fill="#ff9db0"/>
+    <rect class="blush" x="146" y="118" width="20" height="15" rx="5" fill="#ff9db0"/>
     <path id="mouth" d="M84 148 h10 v-8 h12 v8 h10" stroke="#8a4a5a" stroke-width="4" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
     <rect id="bodyInner" x="78" y="156" width="44" height="8" fill="#f7f7f7"/>
   </g>
 </svg>
 <script>
-// petEngine:由OverlayService通过evaluateJavascript调用
 var currentState = { heat: 50, valence: 0, arousal: 0, mood: 'normal' };
+var bubble = document.getElementById('bubble');
+var pet = document.getElementById('pet');
+var bodyOuter = document.getElementById('bodyOuter');
+var bodyInner = document.getElementById('bodyInner');
+var mouth = document.getElementById('mouth');
+var heatOverlay = document.getElementById('heatOverlay');
+var zzz = document.getElementById('zzz');
+
+// === 自言自语词池（日常/黏人/混乱/深夜） ===
+var monologuePools = {
+  daily: ["好无聊哦…", "今天吃什么呢？", "喵呜～", "天气不错呀", "在忙什么呢？"],
+  clingy: ["别走嘛…", "再陪我一会嘛", "哼，都不理我", "抱抱！", "看我干嘛，想我啦？"],
+  chaos: ["炸毛！", "哔哔哔——", "我要闹了！", "呜哇哇", "哒哒哒！"],
+  night: ["该睡觉啦…", "夜深了，好安静", "晚安哦…", "呼……", "别熬夜啦"]
+};
+var monologueTimer = null;
+function scheduleMonologue() {
+  if (monologueTimer) clearTimeout(monologueTimer);
+  var delay = 180000 + Math.random() * 120000; // 3~5分钟随机
+  monologueTimer = setTimeout(function() {
+    var h = new Date().getHours();
+    var poolKey = (h >= 23 || h < 6) ? 'night'
+      : (Math.random() < 0.4 ? 'clingy' : (Math.random() < 0.5 ? 'daily' : 'chaos'));
+    var pool = monologuePools[poolKey];
+    say(pool[Math.floor(Math.random() * pool.length)]);
+    scheduleMonologue();
+  }, delay);
+}
+scheduleMonologue();
+
+// === 触发词三级响应 ===
+function detectTrigger(text) {
+  var t1 = ['烦死了','滚','讨厌','走开','闭嘴'];
+  var t2 = ['爱你','喜欢','亲亲','抱抱','想你'];
+  var t3 = ['乖','睡吧','摸摸','辛苦','晚安'];
+  for (var i = 0; i < t1.length; i++) if (text.indexOf(t1[i]) >= 0) return 't1';
+  for (var i = 0; i < t2.length; i++) if (text.indexOf(t2[i]) >= 0) return 't2';
+  for (var i = 0; i < t3.length; i++) if (text.indexOf(t3[i]) >= 0) return 't3';
+  return null;
+}
+
+// === 动作系统 ===
+var actionMap = {
+  jealous:  { text: "又刷抖音！不理我了？哼！🍋", cls: "act-wobble" },
+  boss:     { text: "买买买！本喵批准了！💎", cls: "act-fly" },
+  book:     { text: "学习加油！本喵给你搬书📚", cls: "act-wobble" },
+  watch:    { text: "嗯？和谁聊天呢…", cls: "act-peek" },
+  juggle:   { text: "切这么快！杂耍喵上线！🤹", cls: "act-fly" },
+  charging: { text: "充电中，元气满满！⚡", cls: "act-fly" },
+  unplug:   { text: "拔线了？电量要省着点用哦", cls: "" },
+  lowbattery:{ text: "电量告急！快充电！😱", cls: "act-wobble" },
+  pose:     { text: "是在截我吗！📸", cls: "act-fly" },
+  drink:    { text: "两小时啦！喝水！💧", cls: "act-wobble" },
+  sleep:    { text: "", cls: "act-sleep" },
+  wake:     { text: "早呀！伸个懒腰～☀️", cls: "act-fly" },
+  lunch:    { text: "吃饭时间到！🍚", cls: "act-wobble" },
+  dance:    { text: "啦啦啦～🎵", cls: "act-fly" },
+  combo3:   { text: "连续摸我！嘿嘿😊", cls: "act-wobble" },
+  combo5:   { text: "哈哈好痒！停手啦！😆", cls: "act-fly" },
+  combo8:   { text: "呜哇！要爆炸啦！💥", cls: "act-fly" },
+  lonely1:  { text: "（偷偷看你）", cls: "act-peek" },
+  lonely2:  { text: "（吹泡泡……）", cls: "" },
+  lonely3:  { text: "（搬东西玩……）", cls: "act-wobble" },
+  lonely4:  { text: "（打瞌睡……）", cls: "act-sleep" },
+  lonely5:  { text: "（睡着了……）", cls: "act-sleep" }
+};
+
 window.petEngine = {
   onTap: function() { say("喵？"); },
   onDoubleTap: function() { say("嘿嘿，摸我啦 ♥"); bounce(); },
   onLongPress: function() { hide(); say("……躲起来了"); },
+  onFling: function(dir) { say("呜哇——被甩飞了！(爬回来)"); flyback(); },
   say: say,
   setState: function(s) {
     if (!s) return;
@@ -61,49 +138,41 @@ window.petEngine = {
     if (s.mood) currentState.mood = s.mood;
     applyState();
   },
-  showCloud: function(text) { say(text); }
-};
-var bubble = document.getElementById('bubble');
-var pet = document.getElementById('pet');
-var bodyOuter = document.getElementById('bodyOuter');
-var bodyInner = document.getElementById('bodyInner');
-var mouth = document.getElementById('mouth');
-function applyState() {
-  // 身体永远纯白（参考图：白方块脸+身体）
-  bodyOuter.setAttribute('fill', '#ffffff');
-  bodyInner.setAttribute('fill', '#f7f7f7');
-  // heat 只影响腮红深浅（粉色系，不改变主体颜色）
-  var h = currentState.heat;
-  var blush;
-  if (h < 30) { blush = '#f5b8c4'; }
-  else if (h > 70) { blush = '#ff7f9e'; }
-  else { blush = '#ff9db0'; }
-  var blushes = document.querySelectorAll('rect[x="34"][y="118"], rect[x="146"][y="118"]');
-  for (var i = 0; i < blushes.length; i++) blushes[i].setAttribute('fill', blush);
-  // mood 驱动像素嘴型（阶梯折线）
-  switch (currentState.mood) {
-    case 'happy': mouth.setAttribute('d', 'M84 150 h6 v-6 h20 v6 h6'); break;
-    case 'sad': mouth.setAttribute('d', 'M84 144 h6 v6 h20 v-6 h6'); break;
-    case 'angry': mouth.setAttribute('d', 'M84 148 h32'); break;
-    default: mouth.setAttribute('d', 'M84 148 h10 v-8 h12 v8 h10'); break;
+  showCloud: function(text) {
+    var t = detectTrigger(text);
+    if (t === 't1') { applyMood('angry'); say(text + "（喵！生气了！😾）"); }
+    else if (t === 't2') { applyMood('happy'); say(text + "（❤️）"); }
+    else if (t === 't3') { applyMood('normal'); say(text + "（乖乖~）"); }
+    else say(text);
+  },
+  act: function(action) {
+    var a = actionMap[action];
+    if (!a) return;
+    if (action === 'sleep') { zzz.style.display = 'block'; }
+    else if (action === 'wake' || action === 'charging' || action === 'dance' || action === 'combo8') { zzz.style.display = 'none'; }
+    if (a.cls) flashCls(a.cls);
+    if (a.text) say(a.text);
+    if (action === 'lonely5' || action === 'sleep') zzz.style.display = 'block';
   }
+};
+
+function applyMood(mood) {
+  currentState.mood = mood;
+  applyState();
 }
-function say(text) {
-  bubble.textContent = text;
-  bubble.style.display = 'block';
-  setTimeout(function(){ bubble.style.display = 'none'; }, 2000);
+
+function flashCls(cls) {
+  document.body.classList.remove('act-wobble','act-fly','act-sleep','act-peek');
+  void document.body.offsetWidth;
+  document.body.classList.add(cls);
+  setTimeout(function() { document.body.classList.remove(cls); }, 2000);
 }
-function bounce() {
-  pet.style.animation = 'none';
-  pet.style.transition = 'transform 0.3s';
-  pet.style.transform = 'translateX(-50%) scale(1.15)';
-  setTimeout(function(){ pet.style.transform = 'translateX(-50%) scale(1)'; }, 300);
+
+function flyback() {
+  pet.style.transition = 'transform 0.6s ease-out';
+  pet.style.transform = 'translateX(-50%) scale(0.3) rotate(180deg)';
+  setTimeout(function() {
+    pet.style.transform = 'translateX(-50%) scale(1) rotate(0deg)';
+    setTimeout(function() { pet.style.transition = 'none'; }, 600);
+  }, 600);
 }
-function hide() {
-  pet.style.opacity = '0';
-  pet.style.transition = 'opacity 0.5s';
-  setTimeout(function(){ pet.style.opacity = '1'; pet.style.transition='none'; }, 1500);
-}
-</script>
-</body>
-</html>
