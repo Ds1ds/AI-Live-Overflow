@@ -12,6 +12,9 @@ import android.view.*
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebSettings
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceError
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.deskpet.data.SupabaseRepository
@@ -73,6 +76,7 @@ class OverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        WebView.setWebContentsDebuggingEnabled(true)
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification(hourlyText()))
         deviceId = SupabaseRepository.getDeviceId(this)
@@ -315,7 +319,21 @@ class OverlayService : Service() {
                 allowFileAccess = true
                 cacheMode = WebSettings.LOAD_DEFAULT
             }
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    Log.i("PetOverlay", "pageFinished url=" + url)
+                    view?.evaluateJavascript("typeof window.petEngine") { v ->
+                        Log.i("PetOverlay", "pageFinished engine=" + v)
+                    }
+                }
+                override fun onReceivedError(
+                    view: WebView?, request: WebResourceRequest?, error: WebResourceError?
+                ) {
+                    super.onReceivedError(view, request, error)
+                    Log.e("PetOverlay", "loadError: " + (error?.description ?: "unknown"))
+                }
+            }
             loadUrl("file:///android_asset/pet.html")
             setOnTouchListener(createTouchListener())
         }
@@ -377,6 +395,7 @@ class OverlayService : Service() {
     }
 
     private fun onTap() {
+        Log.i("PetOverlay", "onTap triggered")
         lastInteractTime = System.currentTimeMillis()
         lonelinessStage = -1
         localState.heat = (localState.heat - 2).coerceIn(0, 100)
@@ -396,9 +415,21 @@ class OverlayService : Service() {
             5 -> act("combo5")
             8 -> act("combo8")
         }
-        overlayView?.evaluateJavascript(
-            "window.petEngine && window.petEngine.onTap()", null
-        )
+        callEngine("onTap()")
+    }
+
+    /** 检查引擎存在再调用，缺失时重载页面 */
+    private fun callEngine(jsCall: String) {
+        val wv = overlayView ?: return
+        wv.evaluateJavascript("typeof window.petEngine") { v ->
+            Log.i("PetOverlay", "engine=" + v + " call=" + jsCall)
+            if (v != null && v.contains("object")) {
+                wv.evaluateJavascript("window.petEngine.$jsCall", null)
+            } else {
+                Log.e("PetOverlay", "engine missing! reload page")
+                wv.loadUrl("file:///android_asset/pet.html")
+            }
+        }
     }
 
     private fun onDoubleTap() {
@@ -409,9 +440,7 @@ class OverlayService : Service() {
         localState.arousal = (localState.arousal + 0.3).coerceIn(0.0, 1.0)
         localState.mood = "happy"
         SupabaseRepository.sendMessage(deviceId, "self", "嘿嘿，摸我啦 ♥")
-        overlayView?.evaluateJavascript(
-            "window.petEngine && window.petEngine.onDoubleTap()", null
-        )
+        callEngine("onDoubleTap()")
     }
 
     private fun onLongPress() {
@@ -421,9 +450,7 @@ class OverlayService : Service() {
         localState.valence = (localState.valence - 0.3).coerceIn(-1.0, 1.0)
         localState.mood = "sad"
         SupabaseRepository.sendMessage(deviceId, "self", "……躲起来了")
-        overlayView?.evaluateJavascript(
-            "window.petEngine && window.petEngine.onLongPress()", null
-        )
+        callEngine("onLongPress()")
     }
 
     /** Fling：甩出去 → 爬回来 */
