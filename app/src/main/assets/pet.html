@@ -28,25 +28,21 @@ body { margin:0; overflow:hidden; background:transparent; }
 <div class="bubble" id="bubble"></div>
 <svg id="pet" viewBox="0 0 200 200">
   <g id="body">
-    <!-- 白色方脸+身体一体（参考图：白方块，头身相连） -->
-    <rect id="bodyOuter" x="10" y="30" width="180" height="120" rx="10" fill="#ffffff" stroke="#4a4a4f" stroke-width="3"/>
-    <!-- 左耳：灰色三角形 -->
-    <path id="earL" d="M34 10 L14 36 L58 36 Z" fill="#c8c6ca" stroke="#4a4a4f" stroke-width="3" stroke-linejoin="round"/>
-    <!-- 右耳：米黄色三角形 -->
-    <path id="earR" d="M166 10 L186 36 L142 36 Z" fill="#f3d2a3" stroke="#8a6a44" stroke-width="3" stroke-linejoin="round"/>
-    <!-- 左侧灰色脸颊块 -->
-    <path d="M13 38 h43 a7 7 0 0 1 7 7 v18 a7 7 0 0 1 -7 7 h-43 z" fill="#c8c6ca" stroke="#4a4a4f" stroke-width="2.5"/>
-    <!-- 右侧米黄色脸颊块 -->
-    <path d="M187 38 h-43 a7 7 0 0 0 -7 7 v18 a7 7 0 0 0 7 7 h43 z" fill="#f3d2a3" stroke="#8a6a44" stroke-width="2.5"/>
-    <!-- 眼睛：黑色大竖条（参考图2x4竖条大眼睛） -->
-    <rect class="eye" x="40" y="64" width="26" height="44" rx="8" fill="#222222"/>
-    <rect class="eye" x="118" y="64" width="26" height="44" rx="8" fill="#222222"/>
+    <!-- 白色方脸+身体一体 -->
+    <rect id="bodyOuter" x="25" y="55" width="150" height="115" rx="12" fill="#ffffff" stroke="#4a4a4f" stroke-width="3"/>
+    <!-- 左耳：灰色大三角（参考图：灰耳从上往下） -->
+    <path id="earL" d="M50 12 L28 66 L76 66 Z" fill="#c8c6ca" stroke="#4a4a4f" stroke-width="3" stroke-linejoin="round"/>
+    <!-- 右耳：米黄色大三角 -->
+    <path id="earR" d="M150 12 L172 66 L124 66 Z" fill="#f3d2a3" stroke="#8a6a44" stroke-width="3" stroke-linejoin="round"/>
+    <!-- 眼睛：黑色大竖条 -->
+    <rect class="eye" x="58" y="92" width="26" height="46" rx="9" fill="#222222"/>
+    <rect class="eye" x="116" y="92" width="26" height="46" rx="9" fill="#222222"/>
     <!-- 腮红：粉色 -->
-    <rect x="16" y="100" width="18" height="16" rx="4" fill="#ff9db0"/>
-    <rect x="150" y="100" width="18" height="16" rx="4" fill="#ff9db0"/>
+    <rect x="34" y="118" width="20" height="15" rx="5" fill="#ff9db0"/>
+    <rect x="146" y="118" width="20" height="15" rx="5" fill="#ff9db0"/>
     <!-- 像素小嘴（会动） -->
-    <path id="mouth" d="M84 122 h10 v-8 h12 v8 h10" stroke="#8a4a5a" stroke-width="4" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
-    <rect id="bodyInner" x="70" y="136" width="60" height="10" fill="#f0f0f0"/>
+    <path id="mouth" d="M84 148 h10 v-8 h12 v8 h10" stroke="#8a4a5a" stroke-width="4" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+    <rect id="bodyInner" x="78" y="156" width="44" height="8" fill="#f7f7f7"/>
   </g>
 </svg>
 <script>
@@ -73,20 +69,23 @@ var bodyOuter = document.getElementById('bodyOuter');
 var bodyInner = document.getElementById('bodyInner');
 var mouth = document.getElementById('mouth');
 function applyState() {
-  // heat 驱动体色：低→冷灰白，中→纯白，高→暖粉白
+  // 身体永远纯白（参考图：白方块脸+身体）
+  bodyOuter.setAttribute('fill', '#ffffff');
+  bodyInner.setAttribute('fill', '#f7f7f7');
+  // heat 只影响腮红深浅（粉色系，不改变主体颜色）
   var h = currentState.heat;
-  var outer, inner;
-  if (h < 30) { outer = '#c8d0d8'; inner = '#dde4ea'; }
-  else if (h > 70) { outer = '#ffd9d9'; inner = '#ffe9e9'; }
-  else { outer = '#ffffff'; inner = '#f0f0f0'; }
-  bodyOuter.setAttribute('fill', outer);
-  bodyInner.setAttribute('fill', inner);
+  var blush;
+  if (h < 30) { blush = '#f5b8c4'; }
+  else if (h > 70) { blush = '#ff7f9e'; }
+  else { blush = '#ff9db0'; }
+  var blushes = document.querySelectorAll('rect[x="34"][y="118"], rect[x="146"][y="118"]');
+  for (var i = 0; i < blushes.length; i++) blushes[i].setAttribute('fill', blush);
   // mood 驱动像素嘴型（阶梯折线）
   switch (currentState.mood) {
-    case 'happy': mouth.setAttribute('d', 'M84 124 h6 v-6 h20 v6 h6'); break;
-    case 'sad': mouth.setAttribute('d', 'M84 118 h6 v6 h20 v-6 h6'); break;
-    case 'angry': mouth.setAttribute('d', 'M84 122 h32'); break;
-    default: mouth.setAttribute('d', 'M84 122 h10 v-8 h12 v8 h10'); break;
+    case 'happy': mouth.setAttribute('d', 'M84 150 h6 v-6 h20 v6 h6'); break;
+    case 'sad': mouth.setAttribute('d', 'M84 144 h6 v6 h20 v-6 h6'); break;
+    case 'angry': mouth.setAttribute('d', 'M84 148 h32'); break;
+    default: mouth.setAttribute('d', 'M84 148 h10 v-8 h12 v8 h10'); break;
   }
 }
 function say(text) {
